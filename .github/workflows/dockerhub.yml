@@ -1,0 +1,69 @@
+name: Build & push Docker image
+on:
+  workflow_call:
+    inputs:
+      image:          
+        required: true
+        type: string
+      version_file:   
+        default: VERSION
+        type: string
+    secrets:
+      DOCKERHUB_USERNAME: { required: true }
+      DOCKERHUB_TOKEN:   { required: true }
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - id: meta
+        uses: ./build-metadata 
+
+      - name: Determine Docker organization and tag
+        id: tags
+        shell: bash
+        run: |
+          IMAGE="${{ inputs.image }}"
+          REF_NAME="${GITHUB_REF_NAME}"       # develop, master, release/xyz …
+
+          if [[ "$REF_NAME" == "master" ]]; then
+            # --- new-version tag ---
+            if [[ -f "${{ inputs.version_file }}" ]]; then
+              NEW_VERSION=$(tr -d '\r\n\t ' <"${{ inputs.version_file }}")
+            else
+              echo "::error ::${{ inputs.version_file }} not found"; exit 1
+            fi
+
+            # --- Year-Quarter tag (UTC) ---
+            YEAR=$(date -u +'%Y')
+            Q=$(( (10#$(date -u +'%m') + 2) / 3 ))   # 1-4
+            YQ="${YEAR}Q${Q}"
+
+            TAGS="${IMAGE}:${NEW_VERSION},${IMAGE}:${YQ},${IMAGE}:latest"
+          else
+            # keep current behaviour for develop & release/*
+            SAFE_REF=${REF_NAME//\//-}
+            TAGS="${IMAGE}:${SAFE_REF}"
+          fi
+
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+
+      - uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          build-args: |
+            BUILD_DATE=${{ steps.meta.outputs.build_date }}
+            VCS_REF=${{ steps.meta.outputs.vcs_ref }}
+            VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
