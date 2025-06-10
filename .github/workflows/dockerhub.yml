@@ -26,7 +26,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - id: meta
-        uses: ./build-metadata 
+        uses: usdot-jpo-ode/actions/build-metadata@main 
 
       - name: Determine Docker organization and tag
         id: tags
