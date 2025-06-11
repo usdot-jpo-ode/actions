@@ -1,51 +1,43 @@
 name: Generate Docker Tags
-description: Create three release tags (<version>, <YYYY-Qn>, latest) or
-             a single branch tag for develop / release branches.
+description: Build release tags (<version>, <YYYY-Qn>, latest) or branch tag.
 
 inputs:
-  image:                
-    description: Docker image name pushed to Hub
+  image:
+    description: Full image name, e.g. usdotjpoode/jpo-ode
     required: true
-  version_file:         # only used when build is a master push, not a tag
-    description: File that contains the semantic version
-    default: VERSION
 
 outputs:
   tag_list:
-    description: Comma-separated tag list to feed docker/build-push-action
+    description: Comma-separated Docker tag list
     value: ${{ steps.out.outputs.tags }}
 
 runs:
   using: composite
   steps:
-    - id: ver      # decide the semantic version
+    - id: ver       # semantic version from tag only
       shell: bash
       run: |
-        if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == refs/tags/* ]]; then
-          NEW_VER="${GITHUB_REF_NAME##*-}"              # tag jpo-ode-4.2.0 → 4.2.0
-        elif [[ -f "${{ inputs.version_file }}" ]]; then
-          NEW_VER="$(tr -d '\r\n\t ' <"${{ inputs.version_file }}")"
+        if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+          NEW_VER="${GITHUB_REF_NAME##*-}"          # jpo-ode-4.2.0 → 4.2.0
         else
-          echo "::error::Cannot determine semantic version" && exit 1
+          NEW_VER=""                                # no version on non-tag builds
         fi
         echo "new=$NEW_VER" >>"$GITHUB_OUTPUT"
 
-    - id: yq       # resolve YYYY-Qn from release branches
+    - id: yq        # resolve YYYY-Qn
       shell: bash
       run: |
         norm() { echo "${1,,}" | sed 's/-/-Q/' | tr '[:lower:]' '[:upper:]'; }
         YQ=''
-        # current branch is release/YYYY-qN → take it
         if [[ "$GITHUB_REF" == refs/heads/release/* ]]; then
           BR="${GITHUB_REF_NAME##release/}"
           [[ "$BR" =~ ^20[0-9]{2}-q[1-4]$ ]] && YQ="$(norm "$BR")"
         fi
-        # master or tag build → pick the latest merged release branch
         if [[ -z "$YQ" && ( "$GITHUB_REF_NAME" == master || "$GITHUB_REF" == refs/tags/* ) ]]; then
-          mapfile -t RELS < <(git for-each-ref --format='%(refname:short)' refs/remotes/origin/release)
-          for r in "${RELS[@]}"; do
-            git merge-base --is-ancestor "$r" HEAD 2>/dev/null || continue
-            BR="${r#origin/release/}"
+          mapfile -t rels < <(git for-each-ref --format='%(refname:short)' refs/remotes/origin/release)
+          for rb in "${rels[@]}"; do
+            git merge-base --is-ancestor "$rb" HEAD 2>/dev/null || continue
+            BR="${rb#origin/release/}"
             [[ "$BR" =~ ^20[0-9]{2}-q[1-4]$ ]] || continue
             CAND="$(norm "$BR")"
             [[ -z "$YQ" || "$CAND" > "$YQ" ]] && YQ="$CAND"
@@ -58,8 +50,10 @@ runs:
       shell: bash
       run: |
         IMAGE="${{ inputs.image }}"
-        if [[ "$GITHUB_REF_NAME" == master || "$GITHUB_REF" == refs/tags/* ]]; then
+        if [[ -n "${{ steps.ver.outputs.new }}" ]]; then
           TAGS="$IMAGE:${{ steps.ver.outputs.new }},$IMAGE:${{ steps.yq.outputs.yq }},$IMAGE:latest"
+        elif [[ "$GITHUB_REF_NAME" == master ]]; then
+          echo "::error::Master push must be tagged"; exit 1
         else
           TAGS="$IMAGE:${GITHUB_REF_NAME//\//-}"
         fi

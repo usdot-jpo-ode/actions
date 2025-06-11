@@ -11,6 +11,7 @@ on:
     secrets:
       DOCKERHUB_USERNAME: { required: true }
       DOCKERHUB_TOKEN:   { required: true }
+  workflow_dispatch:
 
 jobs:
   docker:
