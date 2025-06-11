@@ -1,17 +1,15 @@
 name: Build & push Docker image
+
 on:
   workflow_call:
     inputs:
       image:          
         required: true
         type: string
-      version_file:   
-        default: VERSION
-        type: string
     secrets:
       DOCKERHUB_USERNAME: { required: true }
       DOCKERHUB_TOKEN:   { required: true }
-  workflow_dispatch:
+  workflow_dispatch:      # lets you run the job manually
 
 jobs:
   docker:
@@ -27,19 +25,17 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - id: meta
-        uses: usdot-jpo-ode/actions/build-metadata@main 
+        uses: usdot-jpo-ode/actions/build-metadata@main
 
-      - name: Determine Docker organization and tag
-        id: tags
+      - id: tags
         uses: usdot-jpo-ode/actions/generate-tags@main
         with:
-          image: ${{inputs.image}}
-          version_file: ${{inputs.version_file}}
+          image: ${{ inputs.image }}
 
       - uses: docker/build-push-action@v5
         with:
           push: true
-          tags: ${{ steps.tags.outputs.tags }}
+          tags: ${{ steps.tags.outputs.tag_list }}
           build-args: |
             BUILD_DATE=${{ steps.meta.outputs.build_date }}
             VCS_REF=${{ steps.meta.outputs.vcs_ref }}
