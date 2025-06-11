@@ -9,13 +9,22 @@ on:
     secrets:
       DOCKERHUB_USERNAME: { required: true }
       DOCKERHUB_TOKEN:   { required: true }
-  workflow_dispatch:      # lets you run the job manually
+
+  workflow_dispatch:  # optional manual trigger
 
 jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # this is crucial
+
+      - name: Fetch all release branches
+        run: |
+          git fetch origin 'refs/heads/release/*:refs/remotes/origin/release/*'
+
       - uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
