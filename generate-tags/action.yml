@@ -29,10 +29,14 @@ runs:
       run: |
         norm() { echo "${1,,}" | sed 's/-/-Q/' | tr '[:lower:]' '[:upper:]'; }
         YQ=''
+
+        # if we are on a release/YYYY-qN branch, use it
         if [[ "$GITHUB_REF" == refs/heads/release/* ]]; then
           BR="${GITHUB_REF_NAME##release/}"
           [[ "$BR" =~ ^20[0-9]{2}-q[1-4]$ ]] && YQ="$(norm "$BR")"
         fi
+
+        # on master or tag builds, find the latest merged release branch
         if [[ -z "$YQ" && ( "$GITHUB_REF_NAME" == master || "$GITHUB_REF" == refs/tags/* ) ]]; then
           mapfile -t rels < <(git for-each-ref --format='%(refname:short)' refs/remotes/origin/release)
           for rb in "${rels[@]}"; do
@@ -43,8 +47,11 @@ runs:
             [[ -z "$YQ" || "$CAND" > "$YQ" ]] && YQ="$CAND"
           done
         fi
-        [[ -n "$YQ" ]] || { echo "::error::No release/YYYY-qN branch found"; exit 1; }
-        echo "yq=$YQ" >>"$GITHUB_OUTPUT"
+
+        # fail only if a master/tag build still has no quarter
+        if [[ -z "$YQ" && ( "$GITHUB_REF_NAME" == master || "$GITHUB_REF" == refs/tags/* ) ]]; then
+          echo "::error::No release/YYYY-qN branch found"; exit 1
+        fi
 
     - id: build    # assemble the final list
       shell: bash
