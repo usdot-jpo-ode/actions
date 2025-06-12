@@ -3,8 +3,12 @@ name: Docker build
 on:
   workflow_call:
     inputs:
-      context: { default: '.',  type: string }
-      file:    { default: 'Dockerfile', type: string }
+      context:
+        default: .
+        type: string
+      file:
+        default: Dockerfile
+        type: string
 
 jobs:
   build:
@@ -17,16 +21,17 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - id: meta
-        uses: usdot-jpo-ode/actions/build-metadata@main 
+        uses: usdot-jpo-ode/actions/build-metadata@main
 
-      - uses: docker/build-push-action@v5
+      - name: Docker Build
+        uses: docker/build-push-action@v5
         with:
           context: ${{ inputs.context }}
-          file:    ${{ inputs.file }}
-          push:    false          # Only builds on PR's 
-          cache-from: type=gha
-          cache-to:   type=gha,mode=max
+          file: ${{ inputs.file }}
+          push: false
           build-args: |
             BUILD_DATE=${{ steps.meta.outputs.build_date }}
             VCS_REF=${{ steps.meta.outputs.vcs_ref }}
             VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
