@@ -4,37 +4,36 @@ on:
   workflow_call:
     inputs:
       context:
-        default: .
         type: string
+        default: '.'
       file:
-        default: Dockerfile
         type: string
+        default: 'Dockerfile'
       build-args:
-        required: false
-        type: string
-        default: ''
-      secrets:
-        required: false
         type: string
         default: ''
     secrets:
-      MAVEN_GITHUB_TOKEN: { required: false }
+      MAVEN_GITHUB_TOKEN:
+        required: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
 
-      - uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - id: meta
+        name: Generate build metadata
         uses: usdot-jpo-ode/actions/build-metadata@main
 
-      - name: Docker Build
+      - name: Docker Build (no push)
         uses: docker/build-push-action@v5
         with:
           context: ${{ inputs.context }}
@@ -47,6 +46,5 @@ jobs:
             ${{ inputs.build-args }}
           secrets: |
             MAVEN_GITHUB_TOKEN=${{ secrets.MAVEN_GITHUB_TOKEN }}
-            ${{ inputs.secrets }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
