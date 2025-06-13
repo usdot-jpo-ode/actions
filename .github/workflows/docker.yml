@@ -17,6 +17,8 @@ on:
         required: false
         type: string
         default: ''
+    secrets:
+      MAVEN_GITHUB_TOKEN: { required: false }
 
 jobs:
   build:
@@ -26,6 +28,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
+
       - uses: docker/setup-buildx-action@v3
 
       - id: meta
@@ -43,6 +46,7 @@ jobs:
             VERSION=${{ steps.meta.outputs.version }}
             ${{ inputs.build-args }}
           secrets: |
+            MAVEN_GITHUB_TOKEN=${{ secrets.MAVEN_GITHUB_TOKEN }}
             ${{ inputs.secrets }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

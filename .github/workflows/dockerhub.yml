@@ -24,8 +24,8 @@ on:
         default: ''
     secrets:
       DOCKERHUB_USERNAME: { required: true }
-      DOCKERHUB_TOKEN:   { required: true }
-      MAVEN_GITHUB_TOKEN: { required: false } # Optional for specific builds
+      DOCKERHUB_TOKEN:    { required: true }
+      MAVEN_GITHUB_TOKEN: { required: false }
 
   workflow_dispatch:
 
@@ -71,6 +71,7 @@ jobs:
             VERSION=${{ steps.meta.outputs.version }}
             ${{ inputs.build-args }}
           secrets: |
+            MAVEN_GITHUB_TOKEN=${{ secrets.MAVEN_GITHUB_TOKEN }}
             ${{ inputs.secrets }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
