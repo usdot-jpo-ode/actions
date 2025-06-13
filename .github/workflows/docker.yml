@@ -9,6 +9,14 @@ on:
       file:
         default: Dockerfile
         type: string
+      build-args:
+        required: false
+        type: string
+        default: ''
+      secrets:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   build:
@@ -33,5 +41,8 @@ jobs:
             BUILD_DATE=${{ steps.meta.outputs.build_date }}
             VCS_REF=${{ steps.meta.outputs.vcs_ref }}
             VERSION=${{ steps.meta.outputs.version }}
+            ${{ inputs.build-args }}
+          secrets: |
+            ${{ inputs.secrets }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

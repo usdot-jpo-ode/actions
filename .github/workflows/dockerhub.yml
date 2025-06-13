@@ -9,15 +9,25 @@ on:
       context:
         required: false
         type: string
-        default: .
+        default: '.'
       file:
         required: false
         type: string
+        default: 'Dockerfile'
+      build-args:
+        required: false
+        type: string
+        default: ''
+      secrets:
+        required: false
+        type: string
+        default: ''
     secrets:
       DOCKERHUB_USERNAME: { required: true }
       DOCKERHUB_TOKEN:   { required: true }
+      MAVEN_GITHUB_TOKEN: { required: false } # Optional for specific builds
 
-  workflow_dispatch:  # optional manual trigger
+  workflow_dispatch:
 
 jobs:
   docker:
@@ -48,7 +58,7 @@ jobs:
         with:
           image: ${{ inputs.image }}
 
-      - name: Docker Build & Push
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ${{ inputs.context }}
@@ -59,5 +69,8 @@ jobs:
             BUILD_DATE=${{ steps.meta.outputs.build_date }}
             VCS_REF=${{ steps.meta.outputs.vcs_ref }}
             VERSION=${{ steps.meta.outputs.version }}
+            ${{ inputs.build-args }}
+          secrets: |
+            ${{ inputs.secrets }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
