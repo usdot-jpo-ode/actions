@@ -45,6 +45,6 @@ jobs:
             VERSION=${{ steps.meta.outputs.version }}
             ${{ inputs.build-args }}
           secrets: |
-            MAVEN_GITHUB_TOKEN=${{ inputs.MAVEN_GITHUB_TOKEN }}
+            MAVEN_GITHUB_TOKEN=${{ secrets.MAVEN_GITHUB_TOKEN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
