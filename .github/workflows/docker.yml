@@ -34,7 +34,7 @@ jobs:
         uses: usdot-jpo-ode/actions/build-metadata@main
 
       - name: Docker Build (no push)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ${{ inputs.context }}
           file: ${{ inputs.file }}
